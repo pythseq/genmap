@@ -89,7 +89,7 @@ void buildIndex(TChromosomes & chromosomes, IndexOptions const & options)
         else
         {
             std::cout << "Create fwd Index ... " << std::flush;
-            indexCreate(fwdIndex, FibreSALF());
+            indexCreate(fwdIndex, FibreSALF(), true);
             std::cout << "done!\n";
         }
         save(fwdIndex, toCString(options.indexPath));
@@ -105,7 +105,7 @@ void buildIndex(TChromosomes & chromosomes, IndexOptions const & options)
         else
         {
             std::cout << "Create bwd Index ... " << std::flush;
-            indexCreate(bwdIndex, FibreSALF());
+            indexCreate(bwdIndex, FibreSALF(), true);
             std::cout << "done!\n";
         }
         clear(getFibre(getFibre(getFibre(bwdIndex, FibreSA()), FibreSparseString()), FibreValues()));

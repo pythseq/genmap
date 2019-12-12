@@ -125,10 +125,8 @@ if (SEQAN_VERSION_STRING VERSION_LESS "${MINIMUM_SEQAN_VERSION}")
     return ()
 endif ()
 
-# deactivate the version check on broken seqan releases
-if (SEQAN_VERSION_STRING VERSION_LESS "2.3.2")
-    add_definitions (-DSEQAN_DISABLE_VERSION_CHECK="YES")
-endif ()
+# deactivate the version check
+add_definitions (-DSEQAN_DISABLE_VERSION_CHECK="YES")
 
 message (STATUS "The requirements were met.")
 

@@ -410,7 +410,13 @@ inline void run(Options const & opt, SearchParams const & searchParams)
         uint64_t const nbr_total_kmers = designFileOutput.kmer_id.size();
         uint64_t max_kmers_per_genome = 0;
         for (uint64_t i = 0; i < designFileOutput.matrix.size(); ++i)
+        {
+            // remove duplicates
+            std::sort(designFileOutput.matrix[i].begin(), designFileOutput.matrix[i].end());
+            designFileOutput.matrix[i].erase( unique( designFileOutput.matrix[i].begin(), designFileOutput.matrix[i].end() ), designFileOutput.matrix[i].end() );
+
             max_kmers_per_genome = std::max<uint64_t>(max_kmers_per_genome, designFileOutput.matrix[i].size());
+        }
 
         // output design file
         std::ofstream design_file(output_path + "genmap.design");
@@ -424,13 +430,16 @@ inline void run(Options const & opt, SearchParams const & searchParams)
         {
             design_file << filenames[i] << '\t' << "1.0";
             std::cout << filenames[i] << '\t' << "1.0";
-            // remove duplicates
-            std::sort(designFileOutput.matrix[i].begin(), designFileOutput.matrix[i].end());
-            designFileOutput.matrix[i].erase( unique( designFileOutput.matrix[i].begin(), designFileOutput.matrix[i].end() ), designFileOutput.matrix[i].end() );
+
             for (uint64_t j = 0; j < designFileOutput.matrix[i].size(); ++j)
             {
                 design_file << '\t' << designFileOutput.matrix[i][j];
                 std::cout << '\t' << designFileOutput.matrix[i][j];
+            }
+            for (uint64_t j = designFileOutput.matrix[i].size(); j < max_kmers_per_genome; ++j)
+            {
+                design_file << '\t' << 0;
+                // std::cout << '\t' << 0;
             }
             design_file << '\n';
             std::cout << '\n';

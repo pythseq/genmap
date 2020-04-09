@@ -328,7 +328,7 @@ void saveDesignFile(std::vector<T> const & c, std::string const & /*output_path*
         while (i < c.size() && c[i] == 0)
             ++i;
 
-        if (min_value < nbr_of_genomes)
+        if (min_value <= nbr_of_genomes * opt.designPercentage)
         {
             // transform min_pos to tuple
             Pair<uint64_t, uint64_t> min_pos_tuple;

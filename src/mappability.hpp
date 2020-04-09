@@ -41,6 +41,7 @@ struct Options
     unsigned errors;
     unsigned sampling;
     uint64_t designWindowSize;
+    float designPercentage;
 };
 
 struct DesignFileOutput
@@ -559,6 +560,11 @@ int mappabilityMain(int argc, char const ** argv)
     addOption(parser, ArgParseOption("W", "design-window", "Window size for k-mer extraction for design file", ArgParseArgument::INTEGER, "INT"));
     setDefaultValue(parser, "design-window", 1000);
 
+    addOption(parser, ArgParseOption("Q", "design-percentage", "Probe occurring in max. X perc of the targets", ArgParseArgument::DOUBLE, "DOUBLE"));
+    setDefaultValue(parser, "design-percentage", 0.99);
+    setMinValue(parser, "design-percentage", "0.001");
+    setMaxValue(parser, "design-percentage", "1.0");
+
     addOption(parser, ArgParseOption("m", "memory-mapping",
         "Turns memory-mapping on, i.e. the index is not loaded into RAM but accessed directly from secondary-memory. This may increase the overall running time, but do NOT use it if the index lies on network storage."));
 
@@ -594,6 +600,7 @@ int mappabilityMain(int argc, char const ** argv)
     opt.verbose = isSet(parser, "verbose");
 
     getOptionValue(opt.designWindowSize, parser, "design-window");
+    getOptionValue(opt.designPercentage, parser, "design-percentage");
 
     if (!opt.wigFile && !opt.bedgraphFile && !opt.bedFile && !opt.rawFile && !opt.txtFile && !opt.csvFile)
     {

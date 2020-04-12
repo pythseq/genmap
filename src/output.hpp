@@ -313,22 +313,25 @@ void saveDesignFile(std::vector<T> const & c, std::string const & /*output_path*
     for (uint64_t i = 0; i < c.size();)
     {
         uint64_t min_pos = i;
-        uint64_t min_value = c[i];
+        uint64_t min_value = c[i]; // this could potentially be 0 (which we do not want)
 
-        for (uint64_t j = 1; j <= opt.designWindowSize && i < c.size() && c[i] > 0; ++i, ++j) // c[i]>0 ensures that we choose a minimum in the last incomplete window of each sequence
+        // c[i] == for the last K-1 k-mers of each sequence as well as k-mers containing more N's than errors allowed
+
+        for (uint64_t j = 1; j <= opt.designWindowSize && i < c.size(); ++i, ++j)
         {
-            if (c[i] < min_value/* && c[i] > 0*/) // last K-1 positions in a string are 0
+            // select minimum, but not c[i] == 0, unless we chose c[i] at the beginning by accident
+            if ((c[i] < min_value && c[i] > 0) || (min_value == 0 && c[i] > 0)) // last K-1 positions in a string are 0
             {
                 min_pos = i;
                 min_value = c[i];
             }
         }
 
-        ++i;
-        while (i < c.size() && c[i] == 0)
-            ++i;
+        //++i;
+        //while (i < c.size() && c[i] == 0)
+        //    ++i;
 
-        if (min_value <= nbr_of_genomes * opt.designPercentage)
+        if (min_value > 0 && min_value <= nbr_of_genomes * opt.designPercentage)
         {
             // transform min_pos to tuple
             Pair<uint64_t, uint64_t> min_pos_tuple;

@@ -331,7 +331,7 @@ inline void run(Options const & opt, SearchParams const & searchParams)
         {
             //std::cout << "Now doing: " << fastaFile << std::endl;
             filenames.push_back(fastaFile);
-            if (opt.csvFile)
+            if (opt.csvFile || opt.designFile)
             {
                 // sort for csv output
                 std::sort(csvIntervalsForSingleFasta.begin(), csvIntervalsForSingleFasta.end(), [](auto const & t1, auto const & t2) {
@@ -390,7 +390,7 @@ inline void run(Options const & opt, SearchParams const & searchParams)
 
                 intervalsForSingleFasta.emplace_back(std::make_pair(begin, end));
 
-                if (opt.csvFile)
+                if (opt.csvFile || opt.designFile)
                 {
                     csvIntervalsForSingleFasta.emplace_back(std::make_tuple(chromosomeNamesId, interval.first, interval.second));
                 }
@@ -409,6 +409,7 @@ inline void run(Options const & opt, SearchParams const & searchParams)
         std::string output_path = std::string(toCString(opt.outputPath));
 
         uint64_t const nbr_total_kmers = designFileOutput.kmer_id.size();
+        uint64_t probeCount = 0;
         uint64_t max_kmers_per_genome = 0;
         for (uint64_t i = 0; i < designFileOutput.matrix.size(); ++i)
         {
@@ -416,12 +417,14 @@ inline void run(Options const & opt, SearchParams const & searchParams)
             std::sort(designFileOutput.matrix[i].begin(), designFileOutput.matrix[i].end());
             designFileOutput.matrix[i].erase( unique( designFileOutput.matrix[i].begin(), designFileOutput.matrix[i].end() ), designFileOutput.matrix[i].end() );
             max_kmers_per_genome = std::max<uint64_t>(max_kmers_per_genome, designFileOutput.matrix[i].size());
+            probeCount += designFileOutput.matrix[i].size();
         }
+
         // output design file
         std::ofstream design_file(output_path + "genmap.design");
         design_file << totalFileNo << '\t' << nbr_total_kmers << '\t' << max_kmers_per_genome << '\n';
         std::cout << totalFileNo << '\t' << nbr_total_kmers << '\t' << max_kmers_per_genome << '\n';
-        design_file << 1 << '\t' << 1.0 << '\t' << "TODO" << '\n';
+        design_file << 1 << '\t' << 1.0 << '\t' << (2.0 * probeCount / (double) totalFileNo / (double) nbr_total_kmers) << '\n';
         design_file << "1.0" << '\t' << "0.99" << '\t' << "0.01" << '\n';
         design_file << "1.0" << '\t' << "0.01" << '\t' << "0.99" << '\n';
         design_file << "Entire line is TODO" << '\n';
@@ -483,7 +486,7 @@ inline void run(Options const & opt, SearchParams const & searchParams)
 template <typename TChar, typename TAllocConfig, typename TDistance, typename TValue>
 inline void run(Options const & opt, SearchParams const & searchParams)
 {
-    if (opt.csvFile || searchParams.excludePseudo) // compute csv output when --exclude-pseudo, but don't output!
+    if (opt.csvFile || searchParams.excludePseudo || opt.designFile) // compute csv output when --exclude-pseudo, but don't output!
         run<TChar, TAllocConfig, TDistance, TValue, true>(opt, searchParams);
     else
         run<TChar, TAllocConfig, TDistance, TValue, false>(opt, searchParams);

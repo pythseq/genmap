@@ -41,9 +41,7 @@ void getFileNamesInDirectory(char * path, std::vector<std::pair<std::string, std
             std::string const fileExtension = file.substr(file.find_last_of('.') + 1);
             if (std::find(fastaFileTypes.begin(), fastaFileTypes.end(), fileExtension) != fastaFileTypes.end())
             {
-                auto const pos = file.find_last_of('/');
-                filenames.push_back({file.substr(0, pos), file.substr(pos + 1)});
-                std::cout << file.substr(0, pos) << '\t' << file.substr(pos + 1) << std::endl;
+                filenames.push_back({std::string(path) + "/", file});
             }
         }
         else if (dir -> d_type == DT_DIR && strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0)

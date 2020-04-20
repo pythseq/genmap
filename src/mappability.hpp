@@ -605,7 +605,7 @@ int mappabilityMain(int argc, char const ** argv)
     getOptionValue(opt.designWindowSize, parser, "design-window");
     getOptionValue(opt.designPercentage, parser, "design-percentage");
 
-    if (!opt.wigFile && !opt.bedgraphFile && !opt.bedFile && !opt.rawFile && !opt.txtFile && !opt.csvFile)
+    if (!opt.wigFile && !opt.bedgraphFile && !opt.bedFile && !opt.rawFile && !opt.txtFile && !opt.csvFile && !opt.designFile)
     {
         std::cerr << "ERROR: Please choose at least one output format (i.e., --wig, --bedgraph, --bed, --raw, --txt, --csv).\n";
         return ArgumentParser::PARSE_ERROR;

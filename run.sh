@@ -11,8 +11,11 @@ GENMAP="./build/bin/genmap"
 CLASSIFY="./build/bin/classify"
 MCPD="../pipeline/decoder/MCPD"
 
+ERROR_RATE="0.02" # for simulated reads
+
 READ_FOLDER="$FOLDER/reads_${COVERAGE}x"
 DESIGN_FILE="${FOLDER}/genmap_${WINDOW_SIZE}_${KMER}.design"
+DESIGN_FILE_MODIFIED="${FOLDER}/genmap_${WINDOW_SIZE}_${KMER}.design.tmp"
 KMER_FILE="${FOLDER}/genmap_${WINDOW_SIZE}_${KMER}.kmers"
 
 #if [ -f "$FOLDER/taxids" ]; then
@@ -60,13 +63,13 @@ if [ ! -d "$READ_FOLDER" ]; then
 
   for d in $(find "${FOLDER}" -iname "*.fna"); do
     BASES=$(awk '!($0 ~ /^>/) { printf "%s", $0 }' $d |  wc -m)
-    READS_F=$(echo "($COVERAGE + $BASES) / 150.0" | bc)
+    READS_F=$(echo "($COVERAGE * $BASES) / 150.0" | bc)
     READS=${READS_F%.*}
     filename=$(basename -- "$d")
     filename_wo_ext="${filename%.*}"
     
     #echo "$BASES $READS $filename"
-    wgsim -N ${READS} -1 150 -2 150 $d "${READ_FOLDER}/${filename_wo_ext}.fq" /tmp/2nd_paired.fq > /dev/null 2>&1
+    wgsim -N ${READS} -1 150 -2 150 -e $ERROR_RATE $d "${READ_FOLDER}/${filename_wo_ext}.fq" /tmp/2nd_paired.fq > /dev/null 2>&1
     
     # fastq to fasta
     awk '(NR%4==1) { print ">" substr($0, 2) } (NR%4==2)' "${READ_FOLDER}/${filename_wo_ext}.fq" > "${READ_FOLDER}/${filename_wo_ext}.fa"
@@ -74,15 +77,37 @@ if [ ! -d "$READ_FOLDER" ]; then
   done
 fi
 
+# Compute FN rate
+FN_RATE=$(echo "$ERROR_RATE $KMER $COVERAGE" | awk '{ printf "%.2f", (1 - ((1 - $1)^($2)))^($3) }')
+TN_RATE=$(echo "$FN_RATE" | awk '{ printf "%.2f", (1 - $1) }')
+echo "FN rate: ${FN_RATE}"
+
+head -n 3 ${DESIGN_FILE} > ${DESIGN_FILE_MODIFIED}
+echo -e "1.0\t${FN_RATE}\t${TN_RATE}" >> ${DESIGN_FILE_MODIFIED}
+tail -n +5 ${DESIGN_FILE} >> ${DESIGN_FILE_MODIFIED}
+
 # Classify and decode reads
-#for d in $(find "${READ_FOLDER}" -iname '*.fa'); do
-#  ${CLASSIFY} -K ${KMER_FILE} -F "${d}"
-#  ${MCPD} -w 1000 -s 10000 -m 0.001000 ${DESIGN_FILE} "${d}.result" > "${d}.decoded"
-#done
-find "${READ_FOLDER}" -iname '*.fa' | parallel --will-cite -j ${THREADS} "${CLASSIFY} -K ${KMER_FILE} -F {} && ${MCPD} -w 1000 -s 10000 -m 0.001000 ${DESIGN_FILE} {}.result > {}.decoded"
+# TODO: replace DESIGN_FILE with DESIGN_FILE_MODIFIED for computed FN rate (in the line below)
+find "${READ_FOLDER}" -iname '*.fa' | parallel --will-cite -j ${THREADS} "${CLASSIFY} -K ${KMER_FILE} -F {} && ${MCPD} -w 1000 -s 10000 -m 0.001 ${DESIGN_FILE_MODIFIED} {}.result > {}.decoded"
 
-# Summarize results
-find "${READ_FOLDER}" -iname '*.decoded' | xargs awk '{ if (last_filename == FILENAME) { if (!($0 ~ /^#/) && $2 > 0.02) { print } } else { if (NR!=1) { print "" } print FILENAME; last_filename = FILENAME } }' > "${FOLDER}/summary_${WINDOW_SIZE}_${KMER}"
+# Summarize decoding results
+find "${READ_FOLDER}" -iname '*.decoded' | xargs awk -F$'\t' -f "./decodingSummary.awk" > "${FOLDER}/summary_${WINDOW_SIZE}_${KMER}"
 
-# Print results
+# Print coding results
 cat "${FOLDER}/summary_${WINDOW_SIZE}_${KMER}" | column -t -s $'\t'
+
+# Build kraken database
+if [ ! -f "${FOLDER}/database.kdb" ]; then
+  echo "Build kraken database"
+  krakenuniq-build --build --db ${FOLDER} --threads ${THREADS}
+fi
+
+# Run krakenuniq
+echo "Running krakenuniq (if not already run)"
+for d in $(find "${READ_FOLDER}" -iname "*.fa"); do
+  if [ ! -f "${d}.krakenuniq.report" ]; then
+    krakenuniq --report-file ${d}.krakenuniq.report ${d} --db ${FOLDER} --threads ${THREADS} --fasta-input > /dev/null 2>&1
+  fi
+done
+
+
